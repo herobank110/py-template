@@ -42,7 +42,7 @@ class Templatable(Template):
     """
 
 
-class Array(Templatable):
+class Array(list, Templatable):
     """Template array type.
     """
     def __init__(self, *vals):
@@ -60,12 +60,8 @@ class Array(Templatable):
             )
         )
 
-    def __getitem__(self, index):
-        return self.vals[index]
     def __setitem__(self, index, value):
-        self.vals[index] = self.array_type(value)
-    def __len__(self):
-        return len(self.vals)
+        super().__setitem__(index, self.array_type(value))
 
     def resize(self, new_length):
         if len(self) == new_length:
@@ -74,11 +70,11 @@ class Array(Templatable):
 
         for _ in range(len(self), new_length):
             # Construct default objects until reaching final size.
-            self.vals.append(self.array_type())
+            self.append(self.array_type())
         else:
             # We need to shrink the array.
             for _ in range(len(self) - new_length):
-                self.vals.pop()
+                self.pop()
 
 
 my_array = Array<T(int)>()
