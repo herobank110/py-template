@@ -9,19 +9,16 @@ my_array[0] = 2.5  # can cast or throw
 ```
 """
 
-class Template(type):
+class _Template(type):
     """Metaclass for templates.
     """
-    def __new__(self, *template_args):
-        self.template_args = template_args
-        return super().__new__(self, "T", tuple(), {})
 
     def __gt__(self, other):
         """Starts and ends the syntax for the template argument.
         """
-        if (not isinstance(other, tuple)):
+        if not isinstance(other, tuple):
             # The start of a template argument.
-            if (not issubclass(other, Template)):
+            if other.__dict__.get("__tparams__") is None:
                 raise Exception("'%s' is not a template class" % other.__name__)
 
             self.__template_class = other
@@ -33,16 +30,29 @@ class Template(type):
             return self.__template_class(*other)
 
 
-class T(Template):
+class T(_Template):
     """Wrapper for template arguments.
     """
+    def __new__(self, *template_args):
+        self.template_args = template_args
+        return super().__new__(self, "T", tuple(), {})
 
-class Templatable(Template):
+def template(template_params_string):
     """Wrapper for template classes.
     """
+    def _templatable(cls, template_params_string):
+        t_params = tuple(map(lambda s: s.strip(), template_params_string.split(",")))
+        _name = "%s<%s>" % (cls.__name__, ", ".join(t_params))
+        _bases = (_Template, *cls.__bases__)
+        _dict = dict(cls.__dict__)
+        new_cls = type(_name, _bases, _dict)
+        new_cls.__tparams__ = t_params
+        return new_cls
 
+    return lambda cls: _templatable(cls, template_params_string)
 
-class Array(list, Templatable):
+@template("_elem")
+class Array(list, metaclass=_Template):
     """Template array type.
     """
     def __init__(self, *vals):
